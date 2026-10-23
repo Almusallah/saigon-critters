@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#FFC93C">
+  <meta name="description" content="Spot animals around Saigon, fill your Critter-Dex, and help street dogs and cats get rescued or adopted.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon-192.png">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <title>Saigon Critters</title>
+</head>
+<body>
+  <div id="app">
+    <div id="map" aria-label="Map of Saigon critters"></div>
+
+    <header class="topbar">
+      <button id="trainer" class="trainer" aria-label="Trainer profile"></button>
+      <button id="questBtn" class="round-btn" aria-label="Daily quests">📜</button>
+    </header>
+    <div id="mapChips" class="map-chips"></div>
+    <button id="locateBtn" class="round-btn locate" aria-label="Find me">🎯</button>
+
+    <section id="panel" class="panel" hidden></section>
+
+    <nav class="tabbar">
+      <button data-tab="map" class="on"><span>🗺️</span>Map</button>
+      <button data-tab="deck"><span>📒</span>Deck</button>
+      <button id="catchBtn" class="catch-btn" aria-label="Spot a critter"><span>📸</span></button>
+      <button data-tab="rescue"><span>🆘</span>Rescue<i id="rescueBadge" class="nbadge" hidden></i></button>
+      <button data-tab="adopt"><span>💗</span>Adopt</button>
+    </nav>
+    <div id="toasts"></div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

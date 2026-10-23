@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Saigon Critters Admin</title>
+  <style>
+    :root { --ink: #1D2B53; --muted: #5A6585; --cream: #FFF8E7; --line: #EFE6CF; --yellow: #FFC93C; --green: #3DBE6E; --red: #FF4D4D; --blue: #4D96FF; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 15px/1.45 system-ui, sans-serif; color: var(--ink); background: var(--cream); }
+    main { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+    h1 { margin: 0 0 4px; font-size: 26px; }
+    h2 { margin: 28px 0 10px; font-size: 19px; }
+    p.muted { color: var(--muted); margin: 0 0 16px; }
+    form.key { display: flex; gap: 8px; }
+    input { font: inherit; padding: 9px 12px; border: 2px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); flex: 1; min-width: 0; }
+    button { font: inherit; font-weight: 700; padding: 8px 14px; border: 0; border-radius: 12px; cursor: pointer; background: #fff; color: var(--ink); box-shadow: 0 3px 0 rgba(29,43,83,.15); }
+    button.go { background: var(--yellow); }
+    button.ok { background: var(--green); color: #fff; }
+    button.no { background: var(--red); color: #fff; }
+    .card { background: #fff; border-radius: 16px; padding: 14px 16px; margin: 10px 0; display: grid; gap: 4px; }
+    .card .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .tag { display: inline-block; font-size: 12px; font-weight: 800; padding: 1px 9px; border-radius: 99px; background: var(--line); }
+    .tag.pending { background: #FFEBD1; color: #B45F00; }
+    .tag.approved { background: #D9F5E2; color: #1E7B44; }
+    .tag.rejected, .tag.revoked { background: #FFE0E0; color: #C81E1E; }
+    .empty { color: var(--muted); font-style: italic; }
+    .code { font: 700 20px ui-monospace, monospace; letter-spacing: 2px; background: #FFF1C9; padding: 10px 14px; border-radius: 12px; }
+    .err { color: var(--red); font-weight: 700; }
+    a { color: var(--blue); word-break: break-all; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>🐾 Saigon Critters Admin</h1>
+  <p class="muted">Approve shelters and rescue groups, and help players who lost their password.</p>
+  <form class="key" id="keyForm">
+    <input id="key" type="password" placeholder="Admin key" autocomplete="current-password">
+    <button class="go">Open</button>
+  </form>
+  <p id="msg"></p>
+  <div id="content" hidden>
+    <h2>🕓 Shelter applications</h2><div id="pending"></div>
+    <h2>✅ Verified shelters</h2><div id="approved"></div>
+    <h2>Other applications</h2><div id="closed"></div>
+    <h2>🔑 Player recovery</h2>
+    <p class="muted">For a player who lost both password and recovery code: check who they are in person, then give them a new code.</p>
+    <form class="key" id="findForm"><input id="find" placeholder="Username"><button>Find</button></form>
+    <div id="found"></div>
+  </div>
+</main>
+<script>
+  const $ = id => document.getElementById(id);
+  let key = sessionStorage.getItem('adminKey') || '';
+  let users = [];
+
+  const el = (tag, props = {}, kids = []) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) k === 'text' ? (n.textContent = v) : n.setAttribute(k, v);
+    for (const c of kids) if (c) n.append(c);
+    return n;
+  };
+  const date = t => (t ? new Date(t).toLocaleString() : '');
+
+  async function api(method, body) {
+    const res = await fetch('/api/admin/users', {
+      method,
+      headers: { 'X-Admin-Key': key, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'HTTP ' + res.status);
+    return data;
+  }
+
+  function msg(text, isErr) { $('msg').textContent = text; $('msg').className = isErr ? 'err' : ''; }
+
+  async function load() {
+    try {
+      users = await api('GET');
+      sessionStorage.setItem('adminKey', key);
+      $('content').hidden = false;
+      msg(`${users.length} players.`);
+      render();
+    } catch (e) {
+      $('content').hidden = true;
+      msg(e.message, true);
+    }
+  }
+
+  async function act(userId, action, extra = {}) {
+    try {
+      const r = await api('POST', { userId, action, ...extra });
+      if (r.recoveryCode) {
+        $('found').replaceChildren(el('p', { text: `New recovery code for @${r.user.username}. Give it to them; it is shown only once:` }),
+          el('div', { class: 'code', text: r.recoveryCode }));
+      }
+      await load();
+    } catch (e) { msg(e.message, true); }
+  }
+
+  function shelterCard(u) {
+    const s = u.shelter;
+    const row = el('div', { class: 'row' });
+    const btn = (label, cls, action) => { const b = el('button', { class: cls, text: label }); b.onclick = () => act(u.id, action); return b; };
+    const approve = (label, cls) => { const b = el('button', { class: cls, text: label }); b.onclick = () => act(u.id, 'approve', { appliedAt: s.appliedAt }); return b; };
+    if (s.status === 'pending') row.append(approve('✅ Approve', 'ok'), btn('Reject', 'no', 'reject'));
+    else if (s.status === 'approved') row.append(btn('Revoke', 'no', 'revoke'));
+    else row.append(approve('Approve anyway', 'ok'));
+    return el('div', { class: 'card' }, [
+      el('div', {}, [el('b', { text: s.name }), document.createTextNode(' '), el('span', { class: `tag ${s.status}`, text: s.status })]),
+      el('div', { text: `📞 ${s.phone}${s.area ? ' · 📍 ' + s.area : ''}` }),
+      s.link ? el('a', { href: /^https?:\/\//.test(s.link) ? s.link : 'https://' + s.link, target: '_blank', rel: 'noopener', text: s.link }) : null,
+      s.note ? el('div', { text: `“${s.note}”` }) : null,
+      el('div', { class: 'muted', text: `@${u.username} · applied ${date(s.appliedAt)} · ${u.sightings} sightings · ${u.xp} XP` }),
+      row,
+    ]);
+  }
+
+  function render() {
+    const list = (id, items) => $(id).replaceChildren(...(items.length ? items.map(shelterCard) : [el('p', { class: 'empty', text: 'None.' })]));
+    const withShelter = users.filter(u => u.shelter);
+    list('pending', withShelter.filter(u => u.shelter.status === 'pending'));
+    list('approved', withShelter.filter(u => u.shelter.status === 'approved'));
+    list('closed', withShelter.filter(u => ['rejected', 'revoked'].includes(u.shelter.status)));
+  }
+
+  $('keyForm').onsubmit = e => { e.preventDefault(); key = $('key').value.trim(); load(); };
+  $('findForm').onsubmit = e => {
+    e.preventDefault();
+    const q = $('find').value.trim().toLowerCase();
+    const u = users.find(x => x.username === q);
+    if (!u) return $('found').replaceChildren(el('p', { class: 'empty', text: 'No player with that username.' }));
+    const b = el('button', { class: 'go', text: 'Issue new recovery code' });
+    b.onclick = () => { if (confirm(`Issue a new recovery code for @${u.username}? Their old code stops working.`)) act(u.id, 'recovery'); };
+    $('found').replaceChildren(el('div', { class: 'card' }, [
+      el('b', { text: `@${u.username} (${u.name})` }),
+      el('div', { class: 'muted', text: `joined ${date(u.createdAt)} · ${u.sightings} sightings · ${u.xp} XP` }),
+      el('div', { class: 'row' }, [b]),
+    ]));
+  };
+  if (key) { $('key').value = key; load(); }
+</script>
+</body>
+</html>

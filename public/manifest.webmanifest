@@ -1,0 +1,16 @@
+{
+  "name": "Saigon Critters",
+  "short_name": "Critters",
+  "description": "Spot animals around Saigon, fill your Critter-Dex, and help street dogs and cats.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF8E7",
+  "theme_color": "#FFC93C",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

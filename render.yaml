@@ -1,0 +1,33 @@
+# Render blueprint: one Node web service serving the web app, the API and the shelter admin page.
+# Data lives outside Render (its disk is wiped on deploy): records in MongoDB, photos in Backblaze B2.
+services:
+  - type: web
+    name: saigon-critters
+    runtime: node
+    region: singapore            # closest Render region to Ho Chi Minh City
+    plan: starter                # free instances sleep after 15 min and make the app stall on first sync
+    buildCommand: npm ci --include=dev && npm run build   # vite is a dev dependency
+    startCommand: node server/server.js
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION      # current LTS; the AWS SDK is phasing out Node 20
+        value: "22"
+      - key: TRUST_PROXY         # rate limits use the real client IP from Render's proxy
+        value: "1"
+      - key: MONGODB_URI         # e.g. the Atlas cluster you already use; set in the dashboard
+        sync: false
+      - key: MONGODB_DB
+        value: saigon_critters
+      - key: ADMIN_KEY           # key for /admin (shelter approval); Render generates one
+        generateValue: true
+      - key: PHOTOS_S3_ENDPOINT  # Backblaze B2, e.g. https://s3.us-west-004.backblazeb2.com
+        sync: false
+      - key: PHOTOS_S3_REGION    # e.g. us-west-004
+        sync: false
+      - key: PHOTOS_S3_BUCKET
+        sync: false
+      - key: PHOTOS_S3_KEY_ID    # B2 application key ID (scoped to this bucket)
+        sync: false
+      - key: PHOTOS_S3_SECRET    # B2 application key
+        sync: false

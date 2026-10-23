@@ -1,0 +1,9 @@
+{
+  "appId": "vn.saigoncritters.app",
+  "appName": "Saigon Critters",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": true,
+    "adjustMarginsForEdgeToEdge": "auto"
+  }
+}
