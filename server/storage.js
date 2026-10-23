@@ -115,6 +115,9 @@ async function openBucket({ endpoint, region, bucket, keyId, secret }) {
   try { sdk = await import('@aws-sdk/client-s3'); }
   catch { throw new Error('PHOTOS_S3_BUCKET is set but "@aws-sdk/client-s3" is missing: run npm install'); }
   const { S3Client, PutObjectCommand, GetObjectCommand, HeadBucketCommand } = sdk;
+  // Values pasted from dashboards often carry stray spaces; Backblaze shows the endpoint without https://.
+  [endpoint, region, bucket, keyId, secret] = [endpoint, region, bucket, keyId, secret].map(v => String(v ?? '').trim());
+  if (endpoint && !/^https?:\/\//i.test(endpoint)) endpoint = `https://${endpoint}`;
   const client = new S3Client({
     endpoint,
     region: region || 'us-east-1',
@@ -122,7 +125,14 @@ async function openBucket({ endpoint, region, bucket, keyId, secret }) {
     forcePathStyle: true,
   });
   try { await client.send(new HeadBucketCommand({ Bucket: bucket }), { abortSignal: AbortSignal.timeout(10000) }); }
-  catch (e) { throw new Error(`Photo bucket "${bucket}" is not reachable (${e.name || e.message}). Check the PHOTOS_S3_* settings.`); }
+  catch (e) {
+    const status = e.$metadata?.httpStatusCode;
+    const why = status === 403 ? 'access denied: check PHOTOS_S3_KEY_ID / PHOTOS_S3_SECRET and that the key may use this bucket'
+      : status === 404 ? 'no such bucket: check PHOTOS_S3_BUCKET'
+      : status === 301 || status === 400 ? 'wrong region: check PHOTOS_S3_ENDPOINT and PHOTOS_S3_REGION'
+      : `${e.name}: ${e.message}`;
+    throw new Error(`Photo bucket "${bucket}" at ${endpoint || '(no endpoint)'} is not reachable (${why}).`);
+  }
   const key = id => `photos/${id}.jpg`;
   return {
     // Bounded, so a hung bucket fails the request (the phone retries) instead of holding it open.
