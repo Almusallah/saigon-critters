@@ -57,6 +57,8 @@ function renderPanel() {
 function renderAll() {
   renderTopbar();
   renderPins();
+  // A brand-new community has nothing on the map yet: invite the first catch.
+  $('#emptyHint').hidden = store.all().length > 0;
   // Don't clobber a text field the user is typing in.
   const ae = document.activeElement;
   const typing = $('#panel').contains(ae) && ae.matches('textarea, input:not([type=checkbox]):not([type=radio])');

@@ -114,7 +114,7 @@ src/
   map.js       Leaflet map, pins, filters (tile servers fall back automatically)
   game.js      XP, levels, badges, daily quests
   species.js   the Critter-Dex (species, rarities, statuses)
-  seed.js      demo critters around HCMC (hidden once a server is shared)
+  seed.js      demo critters around HCMC (offline mode only)
 server/
   server.js    API, accounts, shelters, admin, static hosting
   storage.js   JSON files (local) · MongoDB (+ S3/B2 photos) in production

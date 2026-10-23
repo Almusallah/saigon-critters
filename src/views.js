@@ -187,9 +187,9 @@ export function profileView() {
       <div class="name-row"><input class="input" placeholder="https://your-server.example" value="${esc(settings.serverUrl)}" data-set="serverUrl" inputmode="url">
         <button class="btn btn-blue" data-act="save-server">Save</button></div>
       <p class="small">${sync} ${settings.serverUrl ? '<button class="linkish" data-act="sync">Sync now</button>' : ''}</p>
-      <label class="toggle"><input type="checkbox" data-act="toggle-demo" ${settings.showDemo ? 'checked' : ''}><span>Show demo critters</span></label>
+      ${settings.serverUrl ? '' : `<label class="toggle"><input type="checkbox" data-act="toggle-demo" ${settings.showDemo ? 'checked' : ''}><span>Show demo critters</span></label>`}
       <div class="btn-row">
-        <button class="btn btn-ghost" data-act="restore-demo">↺ Restore demo</button>
+        ${settings.serverUrl ? '' : '<button class="btn btn-ghost" data-act="restore-demo">↺ Restore demo</button>'}
         <button class="btn btn-ghost danger" data-act="reset">🗑️ Reset my data</button>
       </div>
     </div>

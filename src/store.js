@@ -137,13 +137,6 @@ export async function init() {
   // Phones signed in before accountId existed: remember which account this progress belongs to.
   if (!me.accountId && authUserId() === me.id) { me.accountId = me.id; persistMe(); }
   sightings = (await get(DB_KEY)) || [];
-  if (!settings.seeded) {
-    const have = new Set(sightings.map(s => s.id));
-    sightings.push(...demoSightings().filter(d => !have.has(d.id)));
-    settings.seeded = true;
-    saveSettings();
-    await persist();
-  }
   // When the web app is served by the community server itself, join it automatically.
   if (!settings.serverUrl && !settings.autoJoined) {
     try {
@@ -156,6 +149,17 @@ export async function init() {
         learnServerId(health.serverId);
       }
     } catch { /* not served by a community server */ }
+  }
+  if (settings.serverUrl) {
+    // A shared community shows only real players' sightings: no demo animals.
+    if (sightings.some(s => s.demo)) { sightings = sightings.filter(s => !s.demo); await persist(); }
+  } else if (!settings.seeded) {
+    // Offline only: a few demo critters so the map isn't empty on first launch.
+    const have = new Set(sightings.map(s => s.id));
+    sightings.push(...demoSightings().filter(d => !have.has(d.id)));
+    settings.seeded = true;
+    saveSettings();
+    await persist();
   }
   if (settings.serverUrl) sync();
   setInterval(() => settings.serverUrl && sync(), 60e3);
@@ -435,7 +439,7 @@ export async function setServer(url, serverId = null) {
   if (!sameCommunity) {
     // A different community: other people's sightings from the old one don't belong here,
     // ours get uploaded again (with photos), and the old server's session and account don't apply.
-    sightings = sightings.filter(s => s.demo || s.userId === me.id);
+    sightings = sightings.filter(s => !url ? s.demo || s.userId === me.id : !s.demo && s.userId === me.id);
     for (const s of mine()) if (!s.demo) { s.dirty = true; s.photoUploaded = false; }
     await persist();
     forgetAuth();
